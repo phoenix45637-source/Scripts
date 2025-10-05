@@ -1,0 +1,71 @@
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local debris = game:GetService("Debris")
+local camera = workspace.CurrentCamera
+
+local ghostMode = false
+
+local function transformGhost()
+    ghostMode = not ghostMode
+    for _, part in pairs(player.Character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.Transparency = ghostMode and 0.7 or 0
+            part.CanCollide = not ghostMode
+        end
+    end
+end
+
+local function killPlayer()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = player.Character.HumanoidRootPart
+    local lookVector = hrp.CFrame.LookVector
+
+    local closestPlayer
+    local closestDistance = math.huge
+
+    for _, target in pairs(game.Players:GetPlayers()) do
+        if target ~= player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHRP = target.Character.HumanoidRootPart
+            local direction = (targetHRP.Position - hrp.Position)
+            local distance = direction.Magnitude
+            local angle = math.acos(direction.Unit:Dot(lookVector))
+            
+            if distance < closestDistance and angle < math.rad(45) then
+                closestDistance = distance
+                closestPlayer = target
+            end
+        end
+    end
+
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local rock = Instance.new("Part")
+        rock.Size = Vector3.new(10, 10, 10)
+        rock.Position = closestPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 50, 0)
+        rock.Anchored = false
+        rock.BrickColor = BrickColor.new("Really black")
+        rock.Material = Enum.Material.Rock
+        rock.CanCollide = true
+        rock.Parent = workspace
+
+        debris:AddItem(rock, 5)
+
+        rock.Touched:Connect(function(hit)
+            local hum = hit.Parent:FindFirstChild("Humanoid")
+            if hum then
+                hum.Health = 0
+            end
+        end)
+    end
+end
+
+uis.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.T then
+        transformGhost()
+    elseif input.KeyCode == Enum.KeyCode.K then
+        killPlayer()
+    end
+end)
