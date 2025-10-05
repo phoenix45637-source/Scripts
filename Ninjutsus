@@ -1,0 +1,155 @@
+local player = game.Players.LocalPlayer
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local debris = game:GetService("Debris")
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+local function playSound(id, parent, volume)
+    local s = Instance.new("Sound")
+    s.SoundId = id
+    s.Volume = volume or 1
+    s.Parent = parent
+    s:Play()
+    debris:AddItem(s, 3)
+end
+
+local function getTarget(range)
+    local ray = Ray.new(rootPart.Position, rootPart.CFrame.LookVector * range)
+    local part, pos = workspace:FindPartOnRay(ray, character)
+    if part and part.Parent then
+        local targetHumanoid = part.Parent:FindFirstChildOfClass("Humanoid")
+        if targetHumanoid and targetHumanoid ~= humanoid then
+            return targetHumanoid
+        end
+    end
+    return nil
+end
+
+local function rasengan()
+    playSound("rbxassetid://9118829117", rootPart, 1)
+    local ball = Instance.new("Part")
+    ball.Shape = Enum.PartType.Ball
+    ball.Material = Enum.Material.Neon
+    ball.Color = Color3.fromRGB(0, 85, 255)
+    ball.Size = Vector3.new(3,3,3)
+    ball.CFrame = rootPart.CFrame * CFrame.new(0,0,-5)
+    ball.Anchored = false
+    ball.CanCollide = false
+    ball.Parent = workspace
+    local particle = Instance.new("ParticleEmitter")
+    particle.Texture = "rbxassetid://1067988850"
+    particle.Rate = 100
+    particle.Lifetime = NumberRange.new(0.5)
+    particle.Speed = NumberRange.new(0)
+    particle.Parent = ball
+    local bv = Instance.new("BodyVelocity")
+    bv.Velocity = rootPart.CFrame.LookVector * 150
+    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+    bv.Parent = ball
+    local connection
+    connection = ball.Touched:Connect(function(hit)
+        local h = hit.Parent:FindFirstChildOfClass("Humanoid")
+        if h and h ~= humanoid then
+            h.Health = 0
+            connection:Disconnect()
+            ball:Destroy()
+        end
+    end)
+    debris:AddItem(ball, 3)
+end
+
+local function shadowCloneJutsu()
+    playSound("rbxassetid://9118842711", rootPart, 1)
+    local clone = character:Clone()
+    clone.Parent = workspace
+    clone:MoveTo(rootPart.Position + rootPart.CFrame.LookVector*5)
+    for _, desc in pairs(clone:GetDescendants()) do
+        if desc:IsA("Script") or desc:IsA("LocalScript") then
+            desc:Destroy()
+        end
+    end
+    local aura = Instance.new("ParticleEmitter")
+    aura.Texture = "rbxassetid://241594314"
+    aura.Rate = 50
+    aura.Lifetime = NumberRange.new(0.5)
+    aura.Speed = NumberRange.new(1,3)
+    aura.Parent = clone:FindFirstChild("HumanoidRootPart") or clone.PrimaryPart
+    local attackLoop
+    attackLoop = runService.Heartbeat:Connect(function()
+        if not clone.Parent then 
+            attackLoop:Disconnect()
+            return
+        end
+        for _, npc in pairs(workspace:GetDescendants()) do
+            if npc:IsA("Humanoid") and npc ~= humanoid then
+                local npcRoot = npc.Parent:FindFirstChild("HumanoidRootPart")
+                if npcRoot and (npcRoot.Position - clone.HumanoidRootPart.Position).Magnitude <= 10 then
+                    npc:TakeDamage(30)
+                end
+            end
+        end
+    end)
+    debris:AddItem(clone, 5)
+end
+
+local flying = false
+local flySpeed = 80
+local bodyVelocity
+
+local function toggleFlying()
+    flying = not flying
+    if flying then
+        playSound("rbxassetid://9118853121", rootPart, 0.7)
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(4e5,4e5,4e5)
+        bodyVelocity.Velocity = Vector3.new(0,0,0)
+        bodyVelocity.Parent = rootPart
+        local trail = Instance.new("ParticleEmitter")
+        trail.Texture = "rbxassetid://241594314"
+        trail.Rate = 100
+        trail.Lifetime = NumberRange.new(0.3)
+        trail.Speed = NumberRange.new(0)
+        trail.Parent = rootPart
+        runService:BindToRenderStep("FlyControl", Enum.RenderPriority.Character.Value, function()
+            local move = Vector3.new()
+            if uis:IsKeyDown(Enum.KeyCode.W) then move = move + camera.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.S) then move = move - camera.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.A) then move = move - camera.CFrame.RightVector end
+            if uis:IsKeyDown(Enum.KeyCode.D) then move = move + camera.CFrame.RightVector end
+            if uis:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
+            if uis:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.new(0,1,0) end
+            if move.Magnitude > 0 then
+                bodyVelocity.Velocity = move.Unit * flySpeed
+            else
+                bodyVelocity.Velocity = Vector3.new(0,0,0)
+            end
+            for _, npc in pairs(workspace:GetDescendants()) do
+                if npc:IsA("Humanoid") and npc ~= humanoid then
+                    local npcRoot = npc.Parent:FindFirstChild("HumanoidRootPart")
+                    if npcRoot and (npcRoot.Position - rootPart.Position).Magnitude <= 5 then
+                        npc:TakeDamage(23)
+                    end
+                end
+            end
+        end)
+    else
+        if bodyVelocity then bodyVelocity:Destroy() end
+        runService:UnbindFromRenderStep("FlyControl")
+    end
+end
+
+uis.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == Enum.KeyCode.R then
+            rasengan()
+        elseif input.KeyCode == Enum.KeyCode.S then
+            shadowCloneJutsu()
+        elseif input.KeyCode == Enum.KeyCode.F then
+            toggleFlying()
+        end
+    end
+end)
