@@ -1,0 +1,33 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local userInputService = game:GetService("UserInputService")
+
+local function makeInvisible()
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = 1
+        elseif part:IsA("ParticleEmitter") or part:IsA("Trail") then
+            part.Enabled = false
+        end
+    end
+end
+
+local function makeVisible()
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = 0
+        elseif part:IsA("ParticleEmitter") or part:IsA("Trail") then
+            part.Enabled = true
+        end
+    end
+end
+
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.V then
+        makeInvisible()
+    elseif input.KeyCode == Enum.KeyCode.U then
+        makeVisible()
+    end
+end)
